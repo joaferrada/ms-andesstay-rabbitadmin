@@ -5,7 +5,7 @@ API REST para administrar RabbitMQ (puerto **8084**): colas, exchanges, bindings
 ## Ejecutar
 
 ```powershell
-docker compose -f ..\infra\mq\compose.yml up -d
+docker compose -f ..\infra\compose.yml up -d rabbit1 rabbit2
 .\mvnw.cmd spring-boot:run                                   # exige JWT con rol Admin
 $env:ANDESSTAY_SECURITY_ENABLED="false"; .\mvnw.cmd spring-boot:run   # local / Postman sin token
 ```
@@ -80,6 +80,18 @@ curl -i -X DELETE localhost:8084/api/admin/exchanges/demo.topic
 ```
 
 Con seguridad activa se agrega `-H "Authorization: Bearer $TOKEN"` (token de Entra ID de un usuario con rol Admin).
+
+## Docker
+
+`Dockerfile` multi-stage: build con `maven:3.9-eclipse-temurin-17` y runtime `eclipse-temurin:17-jre` con usuario no root, puerto **8084** y `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=75`. Se levanta junto al resto del backend con el compose unico de `infra` (ver su README):
+
+```powershell
+cd ..\infra
+docker compose up -d --build rabbitadmin
+docker compose logs -f rabbitadmin
+```
+
+En el compose usa RabbitMQ `rabbit1:5672,rabbit2:5672`, la Management API `http://rabbit1:15672` y `ANDESSTAY_SECURITY_ENABLED=${RABBITADMIN_SECURITY_ENABLED:-true}`. Healthcheck: `GET http://localhost:8084/actuator/health`.
 
 ## Tests
 
